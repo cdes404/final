@@ -1,10 +1,6 @@
-// main.js (Pure D3 + GitHub Pages friendly)
 
-// -----------------------------
-// CONFIG
-// -----------------------------
 const YEAR = 2026;
-const MONTH = 0; // 0 = January, 1 = February, ...
+const MONTH = 0; // starts at Jan
 
 const CATEGORY_COLORS = {
   Press: "#E74C3C",
@@ -15,7 +11,6 @@ const CATEGORY_COLORS = {
   Other: "#7F8C8D",
 };
 
-// If your CSV "Category" values are inconsistent, we map them into a small set
 function mapCategory(csvCategory, details) {
   const c = (csvCategory || "").toLowerCase();
   const d = (details || "").toLowerCase();
@@ -43,68 +38,43 @@ function mapCategory(csvCategory, details) {
     return "Policy";
   }
 
-  // Personal / leisure-ish keywords (optional)
-  if (d.includes("dinner") || d.includes("lunch") || d.includes("breakfast") || d.includes("rest")) {
-    return "Personal";
-  }
-
   return "Other";
 }
 
-// -----------------------------
 // DATA LOADING
-// -----------------------------
-Promise.all([
-  d3.csv("data/Biden Calendar.csv"),
-  d3.csv("data/Trump Calendar.csv"),
-])
-  .then(([bidenRaw, trumpRaw]) => {
-    console.log("Biden columns:", bidenRaw.columns);
+d3.csv("data/Trump Calendar.csv")
+  .then((trumpRaw) => {
     console.log("Trump columns:", trumpRaw.columns);
-    console.log("Sample Biden row:", bidenRaw[0]);
-
-    const biden = bidenRaw
-      .map((r) => processRow(r, "Biden"))
-      .filter((d) => d !== null);
 
     const trump = trumpRaw
       .map((r) => processRow(r, "Trump"))
       .filter((d) => d !== null);
 
-    const all = [...biden, ...trump];
+    const all = [...trump];
 
+    drawAnalysis(all);
     drawCalendar(all);
+    drawKey();
     setupModalClose();
   })
   .catch((err) => {
     console.error("DATA LOAD FAILED:", err);
   });
 
-// -----------------------------
 // ROW PROCESSING
-// -----------------------------
 function processRow(row, president) {
-  // Your CSV headers:
-  // Date, Time, Day of Week, Category, Details, Location, Press Pool, Daily Summary, Factba.se URL, ...
   const dateStr = (row["Date"] || "").trim();
   const timeStr = (row["Time"] || "").trim();
   const details = (row["Details"] || "").trim();
   const csvCategory = (row["Category"] || "").trim();
   const location = (row["Location"] || "").trim();
 
-  // Skip totally empty rows
-  if (!dateStr && !timeStr && !details && !csvCategory) return null;
 
   // If no details, still show something (but don’t crash)
   const title = details || "(no details)";
 
   // Parse datetime safely
   const dt = parseDateTime(dateStr, timeStr);
-  if (!dt) {
-    // If parsing fails, skip row (or keep it if you want)
-    console.warn("Skipping row due to invalid date/time:", row);
-    return null;
-  }
 
   const cat = mapCategory(csvCategory, title);
 
@@ -121,20 +91,11 @@ function processRow(row, president) {
 }
 
 function parseDateTime(dateStr, timeStr) {
-  // Your sample date: "1/20/2025"
-  // Your sample time: "8:00:01"
-  //
-  // We'll parse as M/D/YYYY H:mm:ss (24h works too)
-  // Some rows might not have seconds; handle that.
 
   const cleanTime = (timeStr || "").trim();
 
-  // If time missing, assume midnight
   const t = cleanTime ? cleanTime : "00:00:00";
-
-  // Try with seconds first, then without seconds
   const parseWithSeconds = d3.timeParse("%m/%d/%Y %H:%M:%S");
-  const parseNoSeconds = d3.timeParse("%m/%d/%Y %H:%M");
 
   let dt = parseWithSeconds(`${dateStr} ${t}`);
   if (!dt) dt = parseNoSeconds(`${dateStr} ${t}`);
@@ -142,161 +103,211 @@ function parseDateTime(dateStr, timeStr) {
   return dt || null;
 }
 
-// -----------------------------
+// ANALYSIS DRAWING
+function drawAnalysis(data) {
+  // simple stats about Trump's schedule
+  const analysis = d3.select("#analysis");
+  analysis.html("");
+
+  // total events
+  analysis.append("div").attr("class","stat-box")
+    .html(`<div class="stat-label">Total Trump Events</div><div class="stat-value">${data.length}</div>`);
+
+  // unique locations
+  const uniqueLocs = new Set(data.map(d=>d.location)).size;
+  analysis.append("div").attr("class","stat-box")
+    .html(`<div class="stat-label">Unique Locations</div><div class="stat-value">${uniqueLocs}</div>`);
+
+  // busiest day
+  const byDate = d3.rollups(data, v => v.length, e => e.dayKey);
+
+  if (byDate.length) {
+    // sort descending 
+    byDate.sort((a, b) => b[1] - a[1]);
+    const busiest = byDate[0];
+    const dateStr = busiest[0];
+    const count = busiest[1];
+    const parseDay = d3.timeParse("%Y-%m-%d");
+    const formatted = d3.timeFormat("%B %d, %Y")(parseDay(dateStr));
+
+      //busiest date
+    analysis.append("div").attr("class","stat-box")
+      .html(`<div class="stat-label">Busiest Date (by event count)</div><div class="stat-value">${formatted} (${count})</div>`);
+    console.log("rendering busiest date", formatted, count);
+
+    // next two busiest dates for context
+    if (byDate.length > 1) {
+      const topThree = byDate.slice(0, 3);
+      const list = analysis.append("div").attr("class","stat-section");
+      list.append("div").attr("class","stat-section-title").text("Top 3 Dates by Event Count");
+      topThree.forEach(([dStr, cnt], idx) => {
+        const fmt = d3.timeFormat("%b %d")(parseDay(dStr));
+        const rankLabel = idx === 0 ? "(1st) " : idx === 1 ? "(2nd) " : "(3rd) ";
+        list.append("div").attr("class","stat-item")
+          .html(`<span class="stat-name">${rankLabel}${fmt}</span><span class="stat-count trump" style="color:#f57c00">${cnt}</span>`);
+      });
+    }
+  }
+
+  // weekday distribution
+  const weekdays = d3.rollups(data, v=>v.length, e=>d3.timeFormat("%A")(e.date));
+  if (weekdays.length) {
+    const distSection = analysis.append("div").attr("class","stat-section");
+    distSection.append("div").attr("class","stat-section-title").text("Weekday Breakdown (total events)");
+    weekdays.sort((a,b)=>{
+      const order = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+      return order.indexOf(a[0]) - order.indexOf(b[0]);
+    }).forEach(([day,count])=>{
+      distSection.append("div").attr("class","stat-item")
+        .html(`<span class="stat-name">${day}</span><span class="stat-count trump" style="color:#f57c00">${count}</span>`);
+    });
+  }
+
+  // categorize by location and category
+  const byLocation = d3.rollups(data, v=>v.length, e=>e.location);
+  const byCategory = d3.rollups(data, v=>v.length, e=>e.category);
+
+  // top locations
+  if (byLocation.length) {
+    const locSection = analysis.append("div").attr("class","stat-section");
+    locSection.append("div").attr("class","stat-section-title").text("Top Locations");
+    byLocation.sort((a,b)=>b[1]-a[1]).slice(0,5).forEach(([loc,count])=>{
+      locSection.append("div").attr("class","stat-item")
+        .html(`<span class="stat-name">${loc || "(unknown)"}</span><span class="stat-count trump" style="color:#f57c00">${count}</span>`);
+    });
+  }
+
+  // categories
+  if (byCategory.length) {
+    const catSection = analysis.append("div").attr("class","stat-section");
+    catSection.append("div").attr("class","stat-section-title").text("Event Categories");
+    byCategory.sort((a,b)=>b[1]-a[1]).forEach(([cat,count])=>{
+      const color = CATEGORY_COLORS[cat] || CATEGORY_COLORS.Other;
+      catSection.append("div").attr("class","stat-item")
+        .html(`<span class="stat-name" style="color:${color}">${cat}</span><span class="stat-count trump" style="color:${color}">${count}</span>`);
+    });
+  }
+}
+
+
+function drawKey() {
+  const key = d3.select("#event-key");
+  key.html("");
+  key.append("div").attr("class","stat-section-title").text("Event types");
+  const list = key.append("div").attr("class","key-list");
+  Object.entries(CATEGORY_COLORS).forEach(([cat,color]) => {
+    const item = list.append("div").attr("class","stat-item key-item");
+    item.append("span").attr("class","stat-name").text(cat).style("color",color);
+    item.append("span").attr("class","stat-count").style("background",color);
+  });
+}
+
 // CALENDAR DRAWING
-// -----------------------------
 function drawCalendar(data) {
   const grouped = d3.group(data, (d) => d.dayKey);
 
-  const firstDay = new Date(YEAR, MONTH, 1);
-  const lastDay = new Date(YEAR, MONTH + 1, 0);
+  const calendarsContainer = d3.select("#calendars");
+  calendarsContainer.html("");
 
-  const days = d3.timeDays(firstDay, d3.timeDay.offset(lastDay, 1));
+  // render jan and feb
+  for (let offset = 0; offset <= 1; offset++) {
+    const firstDay = new Date(YEAR, MONTH + offset, 1);
+    const lastDay = new Date(YEAR, MONTH + offset + 1, 0);
+    const days = d3.timeDays(firstDay, d3.timeDay.offset(lastDay, 1));
 
-  d3.select("#month-label").text(d3.timeFormat("%B %Y")(firstDay));
+    const monthBlock = calendarsContainer.append("div").attr("class", "month-block");
+    monthBlock.append("div").attr("class", "month-label").text(d3.timeFormat("%B %Y")(firstDay));
 
-  const calendar = d3.select("#calendar");
-  calendar.html(""); // clear
+    const calendar = monthBlock.append("div").attr("id", `calendar-${offset}`).attr("class","calendar");
 
-  calendar
-    .selectAll(".day")
-    .data(days)
-    .enter()
-    .append("div")
-    .attr("class", "day")
-    .on("click", (event, d) => {
-      const key = d3.timeFormat("%Y-%m-%d")(d);
-      const events = grouped.get(key) || [];
-      openModal(d, events);
-    })
-    .each(function (d) {
-      const dayKey = d3.timeFormat("%Y-%m-%d")(d);
-      const events = grouped.get(dayKey) || [];
+    // add blank slots for first weekday
+    const startWd = firstDay.getDay();
+    const blanks = Array.from({length: startWd}, () => null);
 
-      d3.select(this).append("div").attr("class", "day-number").text(d.getDate());
+    calendar
+      .selectAll(".day")
+      .data(blanks.concat(days))
+      .enter()
+      .append("div")
+      .attr("class", (d) => (d === null ? "day blank" : "day"))
+      .each(function (d) {
+        if (d === null) return; // leave blank cell
+        const key = d3.timeFormat("%Y-%m-%d")(d);
+        const events = grouped.get(key) || [];
 
-      // Compute category counts for tiny bars
-      const counts = d3.rollups(
-        events,
-        (v) => v.length,
-        (e) => e.category
-      )
-      .sort((a, b) => b[1] - a[1]) // most frequent first
-      .slice(0, 4); // up to 4 bars
+        d3.select(this).append("div").attr("class", "day-number").text(d.getDate());
 
-      counts.forEach(([cat, n]) => {
-        d3.select(this)
-          .append("div")
-          .attr("class", "bar")
-          .style("background", CATEGORY_COLORS[cat] || CATEGORY_COLORS.Other)
-          .attr("title", `${cat}: ${n}`);
+        // Compute category counts for key
+        const counts = d3.rollups(
+          events,
+          (v) => v.length,
+          (e) => e.category
+        )
+        .sort((a, b) => b[1] - a[1]) // most frequent first
+        .slice(0, 4);
+
+        counts.forEach(([cat, n]) => {
+          d3.select(this)
+            .append("div")
+            .attr("class", "bar")
+            .style("background", CATEGORY_COLORS[cat] || CATEGORY_COLORS.Other)
+            .attr("title", `${cat}: ${n}`);
+        });
+
+        //tooltip showing category breakdown for this day
+        const allCounts = d3.rollups(
+          events,
+          (v) => v.length,
+          (e) => e.category
+        )
+        .sort((a, b) => b[1] - a[1]);
+        
+        const dateLabel = d3.timeFormat("%b %d, %Y")(d);
+        const tooltipLines = [
+          dateLabel,
+          `${events.length} total events`,
+          "",
+          ...allCounts.map(([cat, n]) => `${cat}: ${n}`)
+        ];
+        const tooltipText = tooltipLines.join("\n");
+        
+        d3.select(this).attr("title", tooltipText);
+
+        d3.select(this).on("click", (event) => {
+          renderDetails(d, events);
+        });
       });
-
-      // Optional: show totals (small)
-      const bidenCount = events.filter((e) => e.president === "Biden").length;
-      const trumpCount = events.filter((e) => e.president === "Trump").length;
-
-      d3.select(this)
-        .append("div")
-        .style("position", "absolute")
-        .style("bottom", "6px")
-        .style("left", "8px")
-        .style("font-size", "11px")
-        .style("opacity", 0.75)
-        .text(`B:${bidenCount} T:${trumpCount}`);
-    });
+  }
 }
 
-// -----------------------------
-// MODAL
-// -----------------------------
-function openModal(date, events) {
-  d3.select("#modal").classed("hidden", false);
-
-  d3.select("#modal-date").text(d3.timeFormat("%B %d, %Y")(date));
-
-  const bidenEvents = events
-    .filter((d) => d.president === "Biden")
-    .sort((a, b) => a.date - b.date);
-
-  const trumpEvents = events
-    .filter((d) => d.president === "Trump")
-    .sort((a, b) => a.date - b.date);
-
-  renderEvents("#biden-events", bidenEvents);
-  renderEvents("#trump-events", trumpEvents);
-}
-
-function renderEvents(container, events) {
-  const div = d3.select(container);
-  div.html("");
-
+function renderDetails(date, events) {
+  const details = d3.select("#details");
+  details.html("");
+  details.append("div").attr("class","stat-section-title").text(d3.timeFormat("%A, %B %d, %Y")(date));
   if (events.length === 0) {
-    div.append("div")
-      .style("opacity", 0.7)
-      .style("font-size", "13px")
-      .text("No events recorded.");
+    details.append("div").style("opacity",0.7).text("No events recorded.");
     return;
   }
-
-  events.forEach((e) => {
-    const timeLabel = d3.timeFormat("%-I:%M %p")(e.date); // e.g. 8:00 AM
-
-    const row = div
-      .append("div")
-      .attr("class", "event")
-      .style("border-left-color", CATEGORY_COLORS[e.category] || CATEGORY_COLORS.Other);
-
-    row.append("div")
-      .style("display", "flex")
-      .style("justify-content", "space-between")
-      .style("gap", "10px");
-
-    row.select("div")
-      .append("strong")
-      .style("font-size", "13px")
-      .text(e.title);
-
-    row.select("div")
-      .append("span")
-      .style("font-size", "12px")
-      .style("opacity", 0.8)
-      .text(timeLabel);
-
-    // Optional metadata line
-    const meta = [];
-    if (e.category) meta.push(e.category);
-    if (e.location) meta.push(e.location);
-    if (e.rawCategory && e.rawCategory !== e.category) meta.push(`Source: ${e.rawCategory}`);
-
-    if (meta.length) {
-      row.append("div")
-        .style("font-size", "12px")
-        .style("opacity", 0.75)
-        .style("margin-top", "3px")
-        .text(meta.join(" • "));
-    }
-  });
+  const section = details.append("div").attr("class","president-section trump");
+  section.append("div").attr("class","president-title").text("Trump Events");
+  events.sort((a,b)=>a.date-b.date).forEach((e)=>renderEvent(section,e));
 }
 
-function setupModalClose() {
-  // Close button
-  d3.select("#close").on("click", () => {
-    d3.select("#modal").classed("hidden", true);
-  });
+function renderEvent(container, e) {
+  const timeLabel = d3.timeFormat("%-I:%M %p")(e.date);
+  const row = container
+    .append("div")
+    .attr("class", "event")
+    .style("border-left-color", CATEGORY_COLORS[e.category] || CATEGORY_COLORS.Other);
 
-  // Click outside modal-content closes
-  d3.select("#modal").on("mousedown", (event) => {
-    // If click hits the overlay (not the content), close
-    if (event.target.id === "modal") {
-      d3.select("#modal").classed("hidden", true);
-    }
-  });
+  row.append("div").attr("class", "event-time").text(timeLabel);
+  row.append("div").attr("class", "event-title").text(e.title);
 
-  // Escape key closes
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      d3.select("#modal").classed("hidden", true);
-    }
-  });
+  const meta = [];
+  if (e.category) meta.push(e.category);
+  if (e.location) meta.push(e.location);
+
+  if (meta.length) {
+    row.append("div").attr("class", "event-meta").text(meta.join(" • "));
+  }
 }

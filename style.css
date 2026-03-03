@@ -1,31 +1,130 @@
 body {
-  font-family: Arial, sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin: 40px;
+  background: #fafafa;
 }
 
-#calendar {
+h1 {
+  color: #003366; 
+  margin-bottom: 10px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+#main-container {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+#analysis {
+  flex: 0 0 25%;
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border: 1px solid #eee;
+  border-left: 6px solid #003366;
+}
+
+#calendars {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.month-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.month-label {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.calendar, #calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 100px);
+  gap: 10px;
+}
+
+#details {
+  flex: 0 0 30%;
+  margin-top: 0;
+}
+
+#event-key {
+  margin-bottom: 20px;
+}
+
+#event-key .stat-section-title {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+#event-key .stat-item {
+  justify-content: flex-start;
+  gap: 8px;
+  margin-right: 16px;
+}
+
+#event-key .key-list {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+#event-key .stat-item .stat-name {
+  font-weight: 600;
+}
+
+#event-key .stat-item .stat-count {
+  flex: none;
+  width: 20px;
+  height: 6px;
+  border-radius: 3px;
+}
+
+.key-item {
+  align-items: center;
+}
+
+.calendar, #calendar {
   display: grid;
   grid-template-columns: repeat(7, 100px);
   gap: 10px;
 }
 
 .day {
-  border: 4px solid #5B2A86;   /* thicker purple border */
-  border-radius: 14px;         /* slightly rounder */
+  border: 4px solid #003366;
+  border-radius: 14px;
   padding: 8px;
   cursor: pointer;
-  height: 110px;               /* slightly taller */
+  height: 110px;
   position: relative;
-  background: #f6f2fb;         /* subtle purple tint */
+  background: #f6f2fb;
   transition: all 0.2s ease;
 }
 
-/* Optional hover effect (looks much better) */
-.day:hover {
-  background: #ede4f7;
-  transform: translateY(-2px);
+.day.blank {
+  background: transparent;
+  border: none;
+  cursor: default;
 }
 
+#details {
+  margin-top: 20px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+#details .president-section {
+  margin-top: 0;
+}
 .day-number {
   font-weight: bold;
 }
@@ -36,39 +135,218 @@ body {
   border-radius: 3px;
 }
 
-/* Modal */
-
-#modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.4);
+.stat-box {
+  margin-bottom: 24px;
 }
 
-.hidden {
-  display: none;
+.stat-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #888;
+  margin-bottom: 8px;
+  font-weight: 600;
 }
 
-#modal-content {
-  background: white;
-  width: 800px;
-  max-height: 80vh;
-  overflow-y: auto;
-  margin: 60px auto;
-  padding: 20px;
-  border-radius: 10px;
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1;
 }
 
-.columns {
+.stat-section {
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+  margin-top: 20px;
+}
+
+.stat-section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.stat-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.stat-item {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 13px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+}
+
+.stat-name {
+  color: #333;
+}
+
+.stat-count {
+  font-weight: 600;
+  color: #1976d2;
+}
+
+.stat-count.trump {
+  color: #f57c00;
+}
+
+.stat-bar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.stat-bar-segment {
+  height: 6px;
+  border-radius: 3px;
+  flex-grow: 1;
+}
+
+.date-card {
+  background: white;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.date-card:hover {
+  border-color: #003366;
+  box-shadow: 0 4px 16px rgba(0,51,102,0.15);
+  transform: translateX(4px);
+}
+
+.date-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.date-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.event-counts {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+  color: #666;
+}
+
+.count-badge {
+  padding: 4px 12px;
+  background: #f0f0f0;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.count-badge.biden {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.count-badge.trump {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.date-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.day.expanded .date-content {
+  max-height: 2000px;
+}
+
+.day.expanded::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #1976d2, #f57c00);
+}
+
+.president-section {
+  margin-top: 16px;
+}
+
+.president-title {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #eee;
+}
+
+.president-section.biden .president-title {
+  color: #1976d2;
+  border-bottom-color: #bbdefb;
+}
+
+.president-section.trump .president-title {
+  color: #f57c00;
+  border-bottom-color: #ffe0b2;
 }
 
 .event {
-  border-left: 8px solid;
-  padding: 5px 10px;
-  margin-bottom: 6px;
-  background: #f8f8f8;
+  border-left: 4px solid;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.event-time {
+  font-weight: 600;
+  font-size: 12px;
+  opacity: 0.7;
+  margin-bottom: 3px;
+}
+
+.event-title {
+  margin-bottom: 3px;
+}
+
+.event-meta {
+  font-size: 11px;
+  opacity: 0.6;
+  margin-top: 4px;
+}
+
+.expand-icon {
+  display: inline-block;
+  margin-left: 8px;
+  transition: transform 0.3s ease;
+}
+
+.date-card.expanded .expand-icon {
+  transform: rotate(180deg);
 }
