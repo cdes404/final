@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Presidential Schedules Comparison</title>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <h1>Presidential Schedules</h1>
+  <h2 id="month-label"></h2>
+
+  <div id="calendar"></div>
+
+  <div id="modal" class="hidden">
+    <div id="modal-content">
+      <span id="close">&times;</span>
+      <h3 id="modal-date"></h3>
+
+      <div class="columns">
+        <div>
+          <h4>Biden</h4>
+          <div id="biden-events"></div>
+        </div>
+        <div>
+          <h4>Trump</h4>
+          <div id="trump-events"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
