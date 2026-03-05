@@ -16,12 +16,27 @@ This project aims to understand the administration's agenda and answer questions
 - Are there large blocks of unstructured time?
 - What is the most common meeting type?
 
+The website supports:
+- A two-month calendar view (January–February 2026)
+- Color-coded event categories (Press, Policy, Meeting, Travel, Other)
+- An interactive details panel that updates on day click
+- A left-side analysis panel summarizing key patterns (busiest days, weekday distribution, top locations, category breakdown)
+
 ## Code
+Libraries Used: D3.js (v7): Used for data loading (d3.csv), date parsing/formatting (d3.timeParse, d3.timeFormat), grouping and aggregation (d3.group, d3.rollups), and DOM-driven rendering/updates
+
+Custom Code (written by us):
+- Data processing pipeline in main.js
+- Interactive visualization logic
+- Analysis computations
 
 ## Technical Achievements
-Several preprocessing steps were required before the data could be used for visualization:
-
-Removal of irrelevant entries: Rows labeled “Pool Call Time” were removed because they do not represent scheduled presidential activities. These entries indicate when members of the press are permitted to arrive at a location rather than an event involving the president or administration. 
-
+- Implemented a data processing system using D3 to load, parse, and normalize schedule data from CSV format
+- Built a category mapping system that converts raw schedule metadata and event text into consistent visualization categories (Press, Policy, Meeting, Travel, Other)
+- Developed a calendar render that correctly aligns weekdays, aggregates events by day, and displays category summaries using color-coded bars
+- Created an interactive details panel that updates on click to show all events for a selected day
+- Computed automated summary statistics (total events, busiest dates, weekday distribution, top locations, and category counts) directly from the dataset
 ## Design Achievements
-
+- Designed a 3 panel layout combining summary statistics, calendar overview, and event details to support both exploration and quick insights
+- Used color coding and a legend to make event types easy to recognize across the calendar
+- Implemented an overview + details-on-demand interaction, allowing users to click any day to see its full schedule
