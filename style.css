@@ -350,3 +350,20 @@ h1 {
 .date-card.expanded .expand-icon {
   transform: rotate(180deg);
 }
+
+#page-header {
+  width: 100%;
+  background-color: #e5e5e5; /* light gray rectangle */
+  padding: 20px;
+  box-sizing: border-box;
+  border-bottom: 2px solid #ccc;
+}
+
+#page-header h1 {
+  margin: 0;
+}
+
+#project-links {
+  margin-top: 8px;
+  font-size: 1rem;
+}
