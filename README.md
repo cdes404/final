@@ -1,8 +1,8 @@
 Final Project - Interactive Data Visualization  
 
-## Project Website: 
+## Project Website: https://cdes404.github.io/final/
 
-## Project Presentation: ALSO PUT IN GITHUB
+## Project Presentation:
 
 ## Presidential Schedules
 
